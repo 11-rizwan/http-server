@@ -4,38 +4,63 @@
 #pragma comment(lib, "ws2_32.lib")
  int main() {
    WSAData wsaData;
-   int result = WSAStartup(MAKEWORD(2,2), &wsaData);
-   if(result !=0){
-      
-      std::cerr << "WSAStarup failed:"<< result << std::endl;
+   int wsresult = WSAStartup(MAKEWORD(2,2), &wsaData);
+   if(wsresult !=0){
+      std::cerr << "WSAStarup failed:"<< wsresult << std::endl;
+      return 1;
    }
+   
    std::cout << "WSAStartup successful" << std::endl;
-   sockaddr_in serverAddr{};
-   serverAddr.sin_family = AF_INET;
-   serverAddr.sin_port = htons(54000);
-   int result2 = inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr);
-   if (result2 <=0){
-      SOCKET err = WSAGetLastError();
-      std::cerr << "ip conversion failed: "<< err <<std::endl;
+   
+   struct addrinfo serverAddr{};
+   struct addrinfo* ptr = NULL;
+   struct addrinfo* result = NULL;
+   SOCKET SOC_CONNECT = INVALID_SOCKET;
+
+
+   ZeroMemory(&serverAddr,sizeof(serverAddr));
+   serverAddr.ai_family = AF_UNSPEC;
+   serverAddr.ai_socktype = SOCK_STREAM;
+   serverAddr.ai_protocol = IPPROTO_TCP;
+
+   int iresult = getaddrinfo("example.com","80",&serverAddr,&result);
+   if(iresult !=0){
+      std::cerr<<"getaddrinfo failed" <<iresult <<std::endl;
       WSACleanup();
       return 1;
+   }
+   for(ptr = result; ptr != nullptr; ptr = ptr->ai_next){
+      SOC_CONNECT=socket(ptr->ai_family,ptr->ai_socktype,ptr->ai_protocol);
+      if(SOC_CONNECT == INVALID_SOCKET){
+         std::cout<<"This one failed ,trying another"<<std::endl;
+         continue;
+      }
+      int iResult = connect(SOC_CONNECT,ptr->ai_addr,(int)ptr->ai_addrlen);
+      if(iResult == SOCKET_ERROR){
+         std::cout<<"couldn't connect closing socket"<<std::endl;
+         closesocket(SOC_CONNECT);
+         SOC_CONNECT = INVALID_SOCKET;
+         continue;
+
+      }
+      std::cout<<"socket connected sucessfully"<<std::endl;
+      break;
+   }
+   if(SOC_CONNECT != INVALID_SOCKET){
+         int close_soc = closesocket(SOC_CONNECT);
+         if (close_soc == 0){
+         std::cout << "SOcket closed sucessfully"<<std::endl;
+         }
+         else{
+            std::cerr<<"socket close failed"<<WSAGetLastError()<<std::endl;
+         }
    }
    else{
-   std::cout<< "IP conversion sucessful"<<std::endl;
+      std::cout<< "no connection established"<<std::endl;
    }
-   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-   
-   if(sock == INVALID_SOCKET){
-      SOCKET error = WSAGetLastError();
-      std::cerr << "socket failed:"<< error << std::endl;
-      WSACleanup();
-      return 1;
-   }
-   std::cout << "Socket created sucessfully "<<std::endl;
-   
-   closesocket(sock);
-   std::cout << "SOcket closed sucessfully"<<std::endl;
+   freeaddrinfo(result);
    WSACleanup();
    std::cout << "WSACleanup sucessful"<<std::endl;
    return 0;
+  
  }
