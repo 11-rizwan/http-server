@@ -11,9 +11,25 @@ void communicatewithserver(SOCKET SOC_CONNECT){
          "Host: example.com\r\n"
          "Connection: Close\r\n"
          "\r\n";
-   int sendreq = send(SOC_CONNECT,httprequest,(int)strlen(httprequest),0);
-   if(sendreq == SOCKET_ERROR){
-      std::cerr<<"request failed with error"<<WSAGetLastError()<<std::endl;
+   int totalbytes = (int)strlen(httprequest);
+   int sendbytes = 0;
+   while(sendbytes < totalbytes ){
+      int sendreq = send(SOC_CONNECT,httprequest + sendbytes,totalbytes - sendbytes,0);
+      if(sendreq == SOCKET_ERROR){
+         std::cerr<<"request failed with error"<<WSAGetLastError()<<std::endl;
+         break;
+      }
+      else if(sendreq ==  0){
+         std::cout<<"could'nt send any request"<<std::endl;
+         break;
+      }
+      sendbytes += sendreq;
+      
+
+   }
+   if(sendbytes != totalbytes){
+      std::cout<<"can't send full request"<<std::endl;
+      return;
    }
    //Receiving request
       char incommingbuffer[4096];
@@ -60,12 +76,12 @@ void communicatewithserver(SOCKET SOC_CONNECT){
    for(ptr = result; ptr != nullptr; ptr = ptr->ai_next){
       SOC_CONNECT=socket(ptr->ai_family,ptr->ai_socktype,ptr->ai_protocol);
       if(SOC_CONNECT == INVALID_SOCKET){
-         std::cout<<"This one failed ,trying another"<<std::endl;
+         std::cerr<<"This one failed ,trying another"<<WSAGetLastError()<<std::endl;
          continue;
       }
       int iResult = connect(SOC_CONNECT,ptr->ai_addr,(int)ptr->ai_addrlen);
       if(iResult == SOCKET_ERROR){
-         std::cout<<"couldn't connect closing socket"<<std::endl;
+         std::cerr<<"couldn't connect closing socket"<<WSAGetLastError()<<std::endl;
          closesocket(SOC_CONNECT);
          SOC_CONNECT = INVALID_SOCKET;
          continue;
