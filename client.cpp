@@ -25,7 +25,6 @@ void communicatewithserver(SOCKET SOC_CONNECT){
       }
       sendbytes += sendreq;
       
-
    }
    if(sendbytes != totalbytes){
       std::cout<<"can't send full request"<<std::endl;
